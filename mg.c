@@ -143,3 +143,51 @@ void residual(grid* level) {
     r[i] = b[i] - Ax[i];
   }
 }
+
+/**
+ * @brief Restricts the residual from a fine grid to a coarse grid using
+ *        four-point averaging.
+ *
+ * Each coarse grid value is the average of the four corresponding fine grid
+ * values.
+ *
+ * @param[out] r_coarse Residual vector on the coarse grid.
+ * @param[in]  r_fine   Residual vector on the fine grid.
+ * @param[in]  N_coarse Dimension of the coarse grid.
+ * @param[in]  N_fine   Dimension of the fine grid.
+ */
+void restriction(double* r_coarse, const double* r_fine, int N_coarse,
+                 int N_fine) {
+
+  // Loop over coarse gird points
+  for (int yc = 0; yc < N_coarse; ++jc) {   // Rows
+    for (int xc = 0; xc < N_coarse; ++xc) { // Columns
+      int coarse_idx = yc * N_coarse + xc;  // 1D index for coarse grid point
+
+      // Indices of the four corresponding fine grid points
+      int yf_top   = 2 * yc;     // Row index of top two fine points
+      int yf_bot   = 2 * yc + 1; // Row index of bottom two fine points
+      int xf_left  = 2 * xc;     // Column index of left two fine points
+      int xf_right = 2 * xc + 1; // Column index of right two fine points
+
+      // Check bounds
+      if (yf_top >= N_fine || yf_bot >= N_fine || xf_left >= N_fine ||
+          xf_right >= N_fine) {
+        fprintf(stderr,
+                "Error: Fine grid index out of bounds during restriction\n");
+        r_coarse[coarse_idx] = 0.0; // Assign a default value
+        continue;                   // Skip to the next coarse grid point
+      }
+
+      // Calculate indices in the 1D fine array
+      int fine_idx_tl = yf_top * N_fine + xf_left;  // Top-left
+      int fine_idx_tr = yf_top * N_fine + xf_right; // Top-Right
+      int fine_idx_bl = yf_bot * N_fine + xf_left;  // Bottom-Left
+      int fine_idx_br = yf_bot * N_fine + xf_right; // Bottom-Right
+
+      // Average the values of the four fine grid points
+      r_coarse[coarse_idx] = 0.25 * (r_fine[fine_idx_tl] + r_fine[fine_idx_tr] +
+                                     r_fine[fine_idx_bl] + r_fine[fine_idx_br]);
+    }
+  }
+}

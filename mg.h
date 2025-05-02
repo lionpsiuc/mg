@@ -70,3 +70,18 @@ void smooth(grid* level, double omega, int nu);
  * @param[out] r     Output residual vector.
  */
 void residual(grid* level);
+
+/**
+ * @brief Restricts the residual from a fine grid to a coarse grid using
+ *        four-point averaging.
+ *
+ * Each coarse grid value is the average of the four corresponding fine grid
+ * values.
+ *
+ * @param[out] r_coarse Residual vector on the coarse grid.
+ * @param[in]  r_fine   Residual vector on the fine grid.
+ * @param[in]  N_coarse Dimension of the coarse grid.
+ * @param[in]  N_fine   Dimension of the fine grid.
+ */
+void restriction(double* r_coarse, const double* r_fine, int N_coarse,
+                 int N_fine);
