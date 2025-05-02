@@ -79,3 +79,53 @@ void rhs(double* b, int N, double (*f)(double, double)) {
     }
   }
 }
+
+/**
+ * @brief Explain briefly.
+ */
+typedef struct {
+  int     N;       // Grid dimension at this level
+  double  h;       // Grid spacing (i.e., h=1/(N+1) for the unit square)
+  int     size;    // Total number of points (i.e., N^2)
+  double* x;       // Solution vector (or correction)
+  double* b;       // Right-hand side vector (or restricted residual)
+  double* r;       // Storage for the residual vector (i.e., r=b-Ax)
+  double* Ax_temp; // Storage for the result of Ax (used in smoother/residual)
+} grid;
+
+/**
+ * @brief Explain briefly.
+ *
+ * Further explanation, if required.
+ *
+ * @param[in,out] level   Explain briefly.
+ * @param[in]     omega   Explain briefly.
+ * @param[in]     nu      Explain briefly.
+ */
+void smooth(grid* level, double omega, int nu) {
+
+  // Extract data from the structure for convenience
+  int           N     = level->N;    // Grid dimension at this level
+  int           size  = level->size; // It is assumed size is passed manually
+  double        D_inv = (level->h * level->h) / 4.0; // Inverse of diagonal
+  double*       x     = level->x; // Pointer to current solution guess
+  const double* b     = level->b; // Pointer to right-hand side
+  double*       r     = level->r; // Pointer to temporary storage for residual
+  double*       Ax    = level->Ax_temp; // Pointer to temporary storage for Ax
+
+  for (int k = 0; k < nu; ++k) {
+
+    // 1. Calculate Ax and store in Ax_temp
+    poisson(x, Ax, N);
+
+    // 2. Calculate residual r=b-Ax and store in r
+    for (int i = 0; i < size; ++i) {
+      r[i] = b[i] - Ax[i];
+    }
+
+    // 3. Update solution
+    for (int i = 0; i < size; ++i) {
+      x[i] += omega * D_inv * r[i];
+    }
+  }
+}
