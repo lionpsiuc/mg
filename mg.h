@@ -62,3 +62,11 @@ void rhs(double* b, int N, double h, double (*f)(double, double));
  * @param[in]     nu    Number of smoothing iterations.
  */
 void smooth(grid* level, double omega, int nu);
+
+/**
+ * @brief Computes the residual r=b-Ax.
+ *
+ * @param[in]  level Pointer to the grid structure.
+ * @param[out] r     Output residual vector.
+ */
+void residual(grid* level);

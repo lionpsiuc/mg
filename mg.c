@@ -2,18 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-/**
- * @brief Explain briefly.
- */
-typedef struct {
-  int     N;       // Grid dimension at this level
-  double  h;       // Grid spacing (i.e., h=1/(N+1) for the unit square)
-  int     size;    // Total number of points (i.e., N^2)
-  double* x;       // Solution vector (or correction)
-  double* b;       // Right-hand side vector (or restricted residual)
-  double* r;       // Storage for the residual vector (i.e., r=b-Ax)
-  double* Ax_temp; // Storage for the result of Ax (used in smoother/residual)
-} grid;
+#include "mg.h"
 
 /**
  * @brief Right-hand side function for the Poisson problem.
@@ -105,18 +94,19 @@ void rhs(double* b, int N, double h, double (*f)(double, double)) {
 void smooth(grid* level, double omega, int nu) {
 
   // Extract data from the structure for convenience
-  int           N     = level->N;    // Grid dimension at this level
-  int           size  = level->size; // It is assumed size is passed manually
-  double        D_inv = (level->h * level->h) / 4.0; // Inverse of diagonal
-  double*       x     = level->x; // Pointer to current solution guess
-  const double* b     = level->b; // Pointer to right-hand side
-  double*       r     = level->r; // Pointer to temporary storage for residual
-  double*       Ax    = level->Ax_temp; // Pointer to temporary storage for Ax
+  int           N     = level->N;
+  int           size  = level->size;
+  double        h     = level->h;
+  double        D_inv = (h * h) / 4.0;  // Inverse of diagonal
+  double*       x     = level->x;       // Pointer to current solution guess
+  const double* b     = level->b;       // Pointer to right-hand side
+  double*       r     = level->r;       // Pointer to storage for residual
+  double*       Ax    = level->Ax_temp; // Pointer to storage for Ax
 
   for (int k = 0; k < nu; ++k) {
 
     // 1. Calculate Ax and store in Ax_temp
-    poisson(x, Ax, N);
+    poisson(x, Ax, N, h);
 
     // 2. Calculate residual r=b-Ax and store in r
     for (int i = 0; i < size; ++i) {
@@ -127,5 +117,29 @@ void smooth(grid* level, double omega, int nu) {
     for (int i = 0; i < size; ++i) {
       x[i] += omega * D_inv * r[i];
     }
+  }
+}
+
+/**
+ * @brief Computes the residual r=b-Ax.
+ *
+ * @param[in]  level Pointer to the grid structure.
+ * @param[out] r     Output residual vector.
+ */
+void residual(grid* level) {
+  int           N    = level->N;
+  int           size = level->size;
+  double        h    = level->h;
+  const double* x    = level->x;
+  const double* b    = level->b;
+  double*       r    = level->r;
+  double*       Ax   = level->Ax_temp;
+
+  // Calculate Ax
+  poisson(x, Ax, N, h);
+
+  // Calculate r=b-Ax
+  for (int i = 0; i < size; ++i) {
+    r[i] = b[i] - Ax[i];
   }
 }
