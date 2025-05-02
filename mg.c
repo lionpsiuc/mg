@@ -3,6 +3,19 @@
 #include <stdlib.h>
 
 /**
+ * @brief Explain briefly.
+ */
+typedef struct {
+  int     N;       // Grid dimension at this level
+  double  h;       // Grid spacing (i.e., h=1/(N+1) for the unit square)
+  int     size;    // Total number of points (i.e., N^2)
+  double* x;       // Solution vector (or correction)
+  double* b;       // Right-hand side vector (or restricted residual)
+  double* r;       // Storage for the residual vector (i.e., r=b-Ax)
+  double* Ax_temp; // Storage for the result of Ax (used in smoother/residual)
+} grid;
+
+/**
  * @brief Right-hand side function for the Poisson problem.
  *
  * @param[in] x1 First coordinate.
@@ -24,9 +37,9 @@ double f(double x1, double x2) {
  * @param[in]  x Input vector.
  * @param[out] y Output vector (i.e., Ax).
  * @param[in]  N Number of grid points in each dimension.
+ * @param[in]  h Grid spacing.
  */
-void poisson(double* x, double* y, int N) {
-  double h      = 1.0 / ((double) N + 1); // Grid spacing
+void poisson(const double* x, double* y, int N, int h) {
   double h2_inv = 1.0 / (h * h);
   for (int j = 0; j < N; j++) {
     for (int i = 0; i < N; i++) {
@@ -66,10 +79,10 @@ void poisson(double* x, double* y, int N) {
  *
  * @param[out] b Vector to be filled with right-hand side values.
  * @param[in]  N Number of grid points in each dimension.
+ * @param[in]  h Grid spacing.
  * @param[in]  f Pointer to function evaluating the right-hand side.
  */
-void rhs(double* b, int N, double (*f)(double, double)) {
-  double h = 1.0 / ((double) N + 1);
+void rhs(double* b, int N, double h, double (*f)(double, double)) {
   for (int j = 0; j < N; j++) {
     for (int i = 0; i < N; i++) {
       int    index = j * N + i;
@@ -81,26 +94,13 @@ void rhs(double* b, int N, double (*f)(double, double)) {
 }
 
 /**
- * @brief Explain briefly.
- */
-typedef struct {
-  int     N;       // Grid dimension at this level
-  double  h;       // Grid spacing (i.e., h=1/(N+1) for the unit square)
-  int     size;    // Total number of points (i.e., N^2)
-  double* x;       // Solution vector (or correction)
-  double* b;       // Right-hand side vector (or restricted residual)
-  double* r;       // Storage for the residual vector (i.e., r=b-Ax)
-  double* Ax_temp; // Storage for the result of Ax (used in smoother/residual)
-} grid;
-
-/**
- * @brief Explain briefly.
+ * @brief Performs the weighted Jacobi smoothing iterations.
  *
- * Further explanation, if required.
+ * Applies nu iterations of the weighted Jacobi method.
  *
- * @param[in,out] level   Explain briefly.
- * @param[in]     omega   Explain briefly.
- * @param[in]     nu      Explain briefly.
+ * @param[in,out] level Pointer to the grid structure for the current level.
+ * @param[in]     omega Weighting factor.
+ * @param[in]     nu    Number of smoothing iterations.
  */
 void smooth(grid* level, double omega, int nu) {
 
