@@ -21,15 +21,6 @@ void free_matrix(double** mat, int n) {
   free(mat);
 }
 
-void print_matrix(double** mat, int n) {
-  for (int i = 0; i < n; i++) {
-    for (int j = 0; j < n; j++) {
-      printf("%6.2f ", mat[i][j]);
-    }
-    printf("\n");
-  }
-}
-
 /**
  * @brief Right-hand side function for the Poisson problem.
  *
@@ -254,7 +245,7 @@ void prolongate(double** x_coarse, double** x_fine, int n_fine) {
  * @param[in]  h2 Square of the grid spacing.
  */
 void gauss(double** x, double** b, int n, double h2) {
-  int    max_iter = 100;
+  int    max_iter = 5000;
   double tol      = 1e-10;
 
   // Initialize solution to zero
@@ -309,7 +300,7 @@ void vcycle(double** x, double** b, double** r, double** temp, int n, double h2,
   int n_coarse = (n - 2) / 2 + 2; // Coarse grid size
 
   // If at coarsest level, solve
-  if (l + 1 == lmax) {
+  if (l == lmax - 1) {
     gauss(temp, r, n, h2);
     coarse_level_solves++;
 
@@ -353,10 +344,25 @@ int main() {
   int    n               = N_interior + 2;
   double h               = 1.0 / (N_interior + 1.0);
   double h2              = h * h;
-  int    nu              = 2;
+  int    nu              = 4;
   double omega           = 2.0 / 3.0;
   double target_residual = 1e-7;
   int    max_v_cycles    = 10000;
+
+  // File handling
+  FILE* summary = fopen("summary.csv", "w");
+  if (summary == NULL) {
+    perror("Error opening summary.csv");
+    return 1;
+  }
+  FILE* conv = fopen("conv.csv", "w");
+  if (conv == NULL) {
+    perror("Error opening conv.csv");
+    fclose(summary); // Close the already opened file
+    return 1;
+  }
+  fprintf(summary, "Levels,Cycles,Runtime,FinalResidual,CoarseSolves\n");
+  fprintf(conv, "Levels,CycleIteration,ResidualNorm\n");
 
   // Allocate matrices for the finest grid
   double** x    = create_matrix(n); // Solution array
@@ -415,10 +421,9 @@ int main() {
     return 1;
   }
   printf("Testing lmax from %d to %d\n\n", start_lmax, max_possible_lmax);
-  printf("%4s | %6s | %14s | %13s | %8s | %9s\n", "lmax", "Cycles",
-         "Final Residual", "Coarse Solves", "Time (s)", "Max Error");
-  printf("---------------------------------------------------------------------"
-         "\n");
+  printf("%4s | %6s | %14s | %13s | %8s\n", "lmax", "Cycles", "Final Residual",
+         "Coarse Solves", "Time (s)");
+  printf("---------------------------------------------------------\n");
 
   // Iterate over different numbers of levels
   for (int lmax_test = start_lmax; lmax_test <= max_possible_lmax;
@@ -437,6 +442,7 @@ int main() {
     int    v_count = 0; // Counter for cycles for this lmax
     double res_norm =
         residual(x, b, r, n, h2); // Calculate initial residual norm
+    fprintf(conv_file, "%d,%d,%.7e\n", lmax_test, v_count, res_norm);
 
     // Start the timer for this lmax run
     clock_t start_time = clock();
@@ -447,6 +453,7 @@ int main() {
       vcycle(x, b, r, temp, n, h2, omega, nu, 0, lmax_test);
       res_norm = residual(x, b, r, n, h2);
       v_count++;
+      fprintf(conv_file, "%d,%d,%.7e\n", lmax_test, v_count, res_norm)
     }
 
     // Stop the timer
@@ -456,32 +463,18 @@ int main() {
     double elapsed_time = (double) (end_time - start_time) / CLOCKS_PER_SEC;
 
     // Print results row
-    printf("%4d | %6d | %14.7e | %13d | %8.4f", lmax_test, v_count, res_norm,
+    printf("%4d | %6d | %14.7e | %13d | %8.4f\n", lmax_test, v_count, res_norm,
            coarse_level_solves, elapsed_time);
 
-    // Check if converged and calculate error against analytical solution
-    if (res_norm <= target_residual) {
-      double max_error = 0.0;
-      for (int i = 1; i <= N_interior; i++) {
-        for (int j = 1; j <= N_interior; j++) {
-          double x1      = (double) i * h;
-          double x2      = (double) j * h;
-          double u_exact = f_analytical(x1, x2);    // Get exact value
-          double diff    = fabs(x[i][j] - u_exact); // Absolute difference
-          if (diff > max_error) {
-            max_error = diff;
-          }
-        }
-      }
-      printf(" | %9.3e\n", max_error);
-    } else {
-      printf(" | %9s\n",
-             "---"); // Did not converge
-    }
+    fprintf(summary_file, "%d,%d,%.4f,%.7e,%d\n", lmax_test, v_count,
+            elapsed_time, res_norm, coarse_level_solves)
   }
 
-  printf("---------------------------------------------------------------------"
-         "\n");
+  printf("---------------------------------------------------------\n");
+
+  // Close files
+  fclose(summary);
+  fclose(conv);
 
   // Free all allocated memory for the finest grid matrices
   free_matrix(x, n);
