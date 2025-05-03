@@ -4,6 +4,30 @@
 #include <string.h>
 #include <time.h>
 
+double** create_matrix(int n) {
+  double** mat = (double**) malloc(n * sizeof(double*));
+  for (int i = 0; i < n; i++) {
+    mat[i] = (double*) calloc(n, sizeof(double));
+  }
+  return mat;
+}
+
+void free_matrix(double** mat, int n) {
+  for (int i = 0; i < n; i++) {
+    free(mat[i]);
+  }
+  free(mat);
+}
+
+void print_matrix(double** mat, int n) {
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
+      printf("%6.2f ", mat[i][j]);
+    }
+    printf("\n");
+  }
+}
+
 /**
  * @brief Right-hand side function for the Poisson problem.
  *
@@ -210,4 +234,41 @@ void prolongate(double** x_coarse, double** x_fine, int n_fine) {
       }
     }
   }
+}
+
+int main() {
+  int n_fine   = 6;
+  int n_coarse = 4;
+
+  // Create matrices
+  double** fine_grid   = create_matrix(n_fine);
+  double** coarse_grid = create_matrix(n_coarse);
+  double** fine_result = create_matrix(n_fine);
+
+  for (int i = 1; i < n_fine - 1; i++) {
+    for (int j = 1; j < n_fine - 1; j++) {
+      fine_grid[i][j] = (i + j) / 2.0;
+    }
+  }
+  print_matrix(fine_grid, n_fine);
+  restriction(fine_grid, coarse_grid, n_fine);
+  print_matrix(coarse_grid, n_coarse);
+
+  // Just changing our coarse grid to mimic a correction
+  for (int i = 1; i < n_coarse - 1; i++) {
+    for (int j = 1; j < n_coarse - 1; j++) {
+      coarse_grid[i][j] *= 2.0;
+    }
+  }
+
+  print_matrix(coarse_grid, n_coarse);
+  prolongate(coarse_grid, fine_result, n_fine);
+  print_matrix(fine_result, n_fine);
+
+  // Clean up
+  free_matrix(fine_grid, n_fine);
+  free_matrix(coarse_grid, n_coarse);
+  free_matrix(fine_result, n_fine);
+
+  return 0;
 }
