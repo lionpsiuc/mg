@@ -101,3 +101,45 @@ double residual(double** x, double** b, double** r, int n, double h2) {
 
   return sqrt(norm); // 2-norm
 }
+
+/**
+ * @brief Restricts the residual from a fine grid to a coarser grid using
+ *        full-weighting.
+ *
+ * Implements the restriction operator that transfers the residual from level l
+ * to level l+1 (coarser) using a full-weighting scheme. It uses a 3x3 stencil
+ * with weights of 1/4 for the center point, 1/8 for the edge-adjacent points,
+ * and 1/16 for the diagonally-adjacent points.
+ *
+ * @param[in]  r_fine   Residual array on the fine grid.
+ * @param[in]  b_coarse Array to store the restricted residual on the coarse
+ *                      grid.
+ * @param[out] n_fine   Size of the fine grid, including boundary points.
+ */
+void restriction(double** r_fine, double** b_coarse, int n_fine) {
+  int n_coarse = (n_fine - 2) / 2 + 2;
+
+  // Full-weighting restriction
+  for (int i = 1; i < n_coarse - 1; i++) {
+    for (int j = 1; j < n_coarse - 1; j++) {
+      int i_fine = 2 * i;
+      int j_fine = 2 * j;
+
+      // Averaging
+      b_coarse[i][j] =
+          0.0625 *
+              (r_fine[i_fine - 1][j_fine - 1] + r_fine[i_fine - 1][j_fine + 1] +
+               r_fine[i_fine + 1][j_fine - 1] +
+               r_fine[i_fine + 1][j_fine + 1]) +
+          0.125 * (r_fine[i_fine - 1][j_fine] + r_fine[i_fine][j_fine - 1] +
+                   r_fine[i_fine + 1][j_fine] + r_fine[i_fine][j_fine + 1]) +
+          0.25 * r_fine[i_fine][j_fine];
+    }
+  }
+
+  // Set boundary values to zero
+  for (int i = 0; i < n_coarse; i++) {
+    b_coarse[i][0] = b_coarse[i][n_coarse - 1] = b_coarse[0][i] =
+        b_coarse[n_coarse - 1][i]              = 0.0;
+  }
+}
