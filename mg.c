@@ -4,6 +4,8 @@
 #include <string.h>
 #include <time.h>
 
+int coarse_level_solves = 0;
+
 double** create_matrix(int n) {
   double** mat = (double**) malloc(n * sizeof(double*));
   for (int i = 0; i < n; i++) {
@@ -236,39 +238,114 @@ void prolongate(double** x_coarse, double** x_fine, int n_fine) {
   }
 }
 
-int main() {
-  int n_fine   = 6;
-  int n_coarse = 4;
+/**
+ * @brief Solves the linear system on the coarsest grid using the Gauss-Seidel
+ *        method.
+ *
+ * This function implements the Gauss-Seidel iterative method to solve the
+ * linear system Ax=b on the coarsest grid level of the multigrid hierarchy. The
+ * iteration continues until convergence is reached or the maximum iteration
+ * count is exceeded.
+ *
+ * @param[out] x  Solution array, initialized to zero and updated with the
+ *                solution.
+ * @param[in]  b  Right-hand side of the linear system.
+ * @param[in]  n  Grid size, including boundary points.
+ * @param[in]  h2 Square of the grid spacing.
+ */
+void gauss(double** x, double** b, int n, double h2) {
+  int    max_iter = 100;
+  double tol      = 1e-10;
 
-  // Create matrices
-  double** fine_grid   = create_matrix(n_fine);
-  double** coarse_grid = create_matrix(n_coarse);
-  double** fine_result = create_matrix(n_fine);
-
-  for (int i = 1; i < n_fine - 1; i++) {
-    for (int j = 1; j < n_fine - 1; j++) {
-      fine_grid[i][j] = (i + j) / 2.0;
+  // Initialize solution to zero
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
+      x[i][j] = 0.0;
     }
   }
-  print_matrix(fine_grid, n_fine);
-  restriction(fine_grid, coarse_grid, n_fine);
-  print_matrix(coarse_grid, n_coarse);
 
-  // Just changing our coarse grid to mimic a correction
-  for (int i = 1; i < n_coarse - 1; i++) {
-    for (int j = 1; j < n_coarse - 1; j++) {
-      coarse_grid[i][j] *= 2.0;
+  // Solve with Gauss-Seidel iterations
+  for (int iter = 0; iter < max_iter; iter++) {
+    double max_diff = 0.0;
+    for (int i = 1; i < n - 1; i++) {
+      for (int j = 1; j < n - 1; j++) {
+        double old_val = x[i][j];
+        x[i][j]        = 0.25 * (x[i - 1][j] + x[i + 1][j] + x[i][j - 1] +
+                          x[i][j + 1] + h2 * b[i][j]);
+
+        double diff = fabs(x[i][j] - old_val);
+        if (diff > max_diff)
+          max_diff = diff;
+      }
     }
+    if (max_diff < tol)
+      break;
   }
-
-  print_matrix(coarse_grid, n_coarse);
-  prolongate(coarse_grid, fine_result, n_fine);
-  print_matrix(fine_result, n_fine);
-
-  // Clean up
-  free_matrix(fine_grid, n_fine);
-  free_matrix(coarse_grid, n_coarse);
-  free_matrix(fine_result, n_fine);
-
-  return 0;
 }
+
+/**
+ * @brief Performs the algorithm.
+ *
+ * @param[in,out] x     Current solution vector, updated with corrections.
+ * @param[in]     b     Right-hand side of the linear system.
+ * @param[out]    r     Array for storing the residual.
+ * @param[in,out] temp  Temporary array used in smoothing operations.
+ * @param[in]     n     Grid size, including boundary points.
+ * @param[in]     h2    Square of the grid spacing.
+ * @param[in]     omega Relaxation parameter for weighted Jacobi.
+ * @param[in]     nu    Number of smoothing operations.
+ * @param[in]     l     Current grid level, where 0 is the finest.
+ * @param[in]     lmax  Maximum grid level.
+ */
+void vcycle(double** x, double** b, double** r, double** temp, int n, double h2,
+            double omega, int nu, int l, int lmax) {
+
+  // 1. Smoothing using nu iterations of weighted Jacobi
+  smooth(x, b, temp, n, h2, omega, nu);
+
+  // 2. Compute the residuals
+  residual(x, b, r, n, h2);
+
+  int n_coarse = (n - 2) / 2 + 2; // Coarse grid size
+
+  // If at coarsest level, solve
+  if (l + 1 == lmax) {
+    gauss(temp, r, n, h2);
+    coarse_level_solves++;
+
+    // Add the correction to our solution
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        x[i][j] += temp[i][j];
+      }
+    }
+  } else {
+
+    // Allocate coarse grid arrays
+    double** x_coarse    = create_matrix(n_coarse);
+    double** b_coarse    = create_matrix(n_coarse);
+    double** r_coarse    = create_matrix(n_coarse);
+    double** temp_coarse = create_matrix(n_coarse);
+
+    // 3. Restrict residual to coarse grid
+    restriction(r, b_coarse, n);
+
+    // 7. Recursive call
+    vcycle(x_coarse, b_coarse, r_coarse, temp_coarse, n_coarse, h2 * 4.0, omega,
+           nu, l + 1, lmax);
+
+    // 8. Prolongate correction back to the fine grid
+    prolongate(x_coarse, x, n);
+
+    // Clean
+    free_matrix(x_coarse, n_coarse);
+    free_matrix(b_coarse, n_coarse);
+    free_matrix(r_coarse, n_coarse);
+    free_matrix(temp_coarse, n_coarse);
+  }
+
+  // 9. Smoothing again
+  smooth(x, b, temp, n, h2, omega, nu);
+}
+
+int main() { return 0; }
