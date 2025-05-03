@@ -143,3 +143,71 @@ void restriction(double** r_fine, double** b_coarse, int n_fine) {
         b_coarse[n_coarse - 1][i]              = 0.0;
   }
 }
+
+/**
+ * @brief Prolongs a correction from a coarse grid to a fine grid using bilinear
+ *        interpolation.
+ *
+ * Implements the prolongation operator that transfers a correction from level
+ * l+1 (coarse) to level l (fine) using bilinear interpolation. It works as
+ * follows:
+ *
+ *   1. Copy coincident points to the fine grid.
+ *   2. Interpolate them horizontally.
+ *   3. Interpolate them vertically.
+ *   4. Interpolate them diagonally to complete the center point.
+ *
+ * @param[in]     x_coarse Correction vector on the coarse grid.
+ * @param[in,out] x_fine   Solution vector on the fine grid, updated by adding
+ *                         the prolongated correction.
+ * @param[in]     n_fine   Size of the fine grid, including boundary points.
+ */
+void prolongate(double** x_coarse, double** x_fine, int n_fine) {
+  int n_coarse = (n_fine - 2) / 2 + 2;
+
+  // 1. Copy coincident points to the fine grid
+  for (int i_c = 0; i_c < n_coarse; i_c++) {
+    for (int j_c = 0; j_c < n_coarse; j_c++) {
+      int i_f = 2 * i_c;
+      int j_f = 2 * j_c;
+      if (i_f < n_fine && j_f < n_fine) {
+        x_fine[i_f][j_f] += x_coarse[i_c][j_c];
+      }
+    }
+  }
+
+  // 2. Interpolate them horizontally
+  for (int i_c = 0; i_c < n_coarse; i_c++) {
+    for (int j_c = 0; j_c < n_coarse - 1; j_c++) {
+      int i_f = 2 * i_c;
+      int j_f = 2 * j_c + 1;
+      if (i_f < n_fine && j_f < n_fine) {
+        x_fine[i_f][j_f] += 0.5 * (x_coarse[i_c][j_c] + x_coarse[i_c][j_c + 1]);
+      }
+    }
+  }
+
+  // 3. Interpolate them vertically
+  for (int i_c = 0; i_c < n_coarse - 1; i_c++) {
+    for (int j_c = 0; j_c < n_coarse; j_c++) {
+      int i_f = 2 * i_c + 1;
+      int j_f = 2 * j_c;
+      if (i_f < n_fine && j_f < n_fine) {
+        x_fine[i_f][j_f] += 0.5 * (x_coarse[i_c][j_c] + x_coarse[i_c + 1][j_c]);
+      }
+    }
+  }
+
+  // 4. Interpolate them diagonally to complete the center point
+  for (int i_c = 0; i_c < n_coarse - 1; i_c++) {
+    for (int j_c = 0; j_c < n_coarse - 1; j_c++) {
+      int i_f = 2 * i_c + 1;
+      int j_f = 2 * j_c + 1;
+      if (i_f < n_fine && j_f < n_fine) {
+        x_fine[i_f][j_f] +=
+            0.25 * (x_coarse[i_c][j_c] + x_coarse[i_c + 1][j_c] +
+                    x_coarse[i_c][j_c + 1] + x_coarse[i_c + 1][j_c + 1]);
+      }
+    }
+  }
+}
