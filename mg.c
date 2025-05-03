@@ -442,7 +442,7 @@ int main() {
     int    v_count = 0; // Counter for cycles for this lmax
     double res_norm =
         residual(x, b, r, n, h2); // Calculate initial residual norm
-    fprintf(conv_file, "%d,%d,%.7e\n", lmax_test, v_count, res_norm);
+    fprintf(conv, "%d,%d,%.7e\n", lmax_test, v_count, res_norm);
 
     // Start the timer for this lmax run
     clock_t start_time = clock();
@@ -453,7 +453,7 @@ int main() {
       vcycle(x, b, r, temp, n, h2, omega, nu, 0, lmax_test);
       res_norm = residual(x, b, r, n, h2);
       v_count++;
-      fprintf(conv_file, "%d,%d,%.7e\n", lmax_test, v_count, res_norm)
+      fprintf(conv, "%d,%d,%.7e\n", lmax_test, v_count, res_norm);
     }
 
     // Stop the timer
@@ -466,8 +466,8 @@ int main() {
     printf("%4d | %6d | %14.7e | %13d | %8.4f\n", lmax_test, v_count, res_norm,
            coarse_level_solves, elapsed_time);
 
-    fprintf(summary_file, "%d,%d,%.4f,%.7e,%d\n", lmax_test, v_count,
-            elapsed_time, res_norm, coarse_level_solves)
+    fprintf(summary, "%d,%d,%.4f,%.7e,%d\n", lmax_test, v_count, elapsed_time,
+            res_norm, coarse_level_solves);
   }
 
   printf("---------------------------------------------------------\n");
