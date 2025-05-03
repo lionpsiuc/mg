@@ -6,6 +6,13 @@
 
 int coarse_level_solves = 0;
 
+/**
+ * @brief Creates a dynamically allocated square matrix of doubles.
+ *
+ * @param[in] n Size of the square matrix.
+ *
+ * @return A pointer to the newly allocated matrix.
+ */
 double** create_matrix(int n) {
   double** mat = (double**) malloc(n * sizeof(double*));
   for (int i = 0; i < n; i++) {
@@ -14,6 +21,12 @@ double** create_matrix(int n) {
   return mat;
 }
 
+/**
+ * @brief Frees all memory associated with a dynamically allocated matrix.
+ *
+ * @param[in] mat Pointer to the matrix to be freed.
+ * @param[in] n   Size of the square matrix.
+ */
 void free_matrix(double** mat, int n) {
   for (int i = 0; i < n; i++) {
     free(mat[i]);
@@ -27,7 +40,7 @@ void free_matrix(double** mat, int n) {
  * @param[in] x1 First coordinate.
  * @param[in] x2 Second coordinate.
  *
- * @return double Value of the function at the given coordinates.
+ * @return Value of the function at the given coordinates.
  */
 double f(double x1, double x2) {
   return 2.0 * M_PI * M_PI * sin(M_PI * x1) * sin(M_PI * x2);
@@ -39,7 +52,7 @@ double f(double x1, double x2) {
  * @param[in] x1 First coordinate.
  * @param[in] x2 Second coordinate.
  *
- * @return double Analytical solution at the given coordinates.
+ * @return Analytical solution at the given coordinates.
  */
 double f_analytical(double x1, double x2) {
   return sin(M_PI * x1) * sin(M_PI * x2);
@@ -92,7 +105,7 @@ void smooth(double** x, double** b, double** temp, int n, double h2,
  * @param[in]  n  Grid size, including the boundary points.
  * @param[in]  h2 Square of the grid spacing.
  *
- * @return double The 2-norm of the residual vector.
+ * @return The 2-norm of the residual vector.
  */
 double residual(double** x, double** b, double** r, int n, double h2) {
   double norm = 0.0;
@@ -355,14 +368,14 @@ int main() {
     perror("Error opening summary.csv");
     return 1;
   }
-  FILE* conv = fopen("conv.csv", "w");
-  if (conv == NULL) {
-    perror("Error opening conv.csv");
+  FILE* residuals = fopen("residuals.csv", "w");
+  if (residuals == NULL) {
+    perror("Error opening residuals.csv");
     fclose(summary); // Close the already opened file
     return 1;
   }
   fprintf(summary, "Levels,Cycles,Runtime,FinalResidual,CoarseSolves\n");
-  fprintf(conv, "Levels,CycleIteration,ResidualNorm\n");
+  fprintf(residuals, "Levels,CycleIteration,ResidualNorm\n");
 
   // Allocate matrices for the finest grid
   double** x    = create_matrix(n); // Solution array
@@ -442,7 +455,7 @@ int main() {
     int    v_count = 0; // Counter for cycles for this lmax
     double res_norm =
         residual(x, b, r, n, h2); // Calculate initial residual norm
-    fprintf(conv, "%d,%d,%.7e\n", lmax_test, v_count, res_norm);
+    fprintf(residuals, "%d,%d,%.7e\n", lmax_test, v_count, res_norm);
 
     // Start the timer for this lmax run
     clock_t start_time = clock();
@@ -453,7 +466,7 @@ int main() {
       vcycle(x, b, r, temp, n, h2, omega, nu, 0, lmax_test);
       res_norm = residual(x, b, r, n, h2);
       v_count++;
-      fprintf(conv, "%d,%d,%.7e\n", lmax_test, v_count, res_norm);
+      fprintf(residuals, "%d,%d,%.7e\n", lmax_test, v_count, res_norm);
     }
 
     // Stop the timer
@@ -474,7 +487,7 @@ int main() {
 
   // Close files
   fclose(summary);
-  fclose(conv);
+  fclose(residuals);
 
   // Free all allocated memory for the finest grid matrices
   free_matrix(x, n);
