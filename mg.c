@@ -83,7 +83,7 @@ void smooth(double** x, double** b, double** temp, int n, double h2,
 
     // Update interior points using a weighted average
     for (int i = 1; i < n - 1; i++) {
-      for (int j = 1; j < n; j++) {
+      for (int j = 1; j < n - 1; j++) {
         double new = 0.25 * (temp[i - 1][j] + temp[i + 1][j] + temp[i][j - 1] +
                              temp[i][j + 1] + h2 * b[i][j]);
         x[i][j]    = (1.0 - omega) * temp[i][j] + omega * new;
