@@ -1,6 +1,6 @@
-import pandas as pd
 import matplotlib.pyplot as plt
 import os
+import pandas as pd
 
 DATA_DIR = "data"
 FIGS_DIR = "figs"
