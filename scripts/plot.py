@@ -17,7 +17,7 @@ df_summary = pd.read_csv(SUMMARY_FILE)
 df_residuals = pd.read_csv(RESIDUALS_FILE)
 
 fig1, (ax1a, ax1b) = plt.subplots(1, 2, figsize=(12, 5))
-fig1.suptitle(r"Performance vs. Number of Levels ($N=128$)")
+fig1.suptitle(r"Performance vs. Number of Levels (N=128)")
 
 ax1a.plot(df_summary["Levels"], df_summary["Cycles"], marker="o", linestyle="-")
 ax1a.set_xlabel("lmax")
@@ -68,11 +68,11 @@ for lmax_val in available_lmax_values:
             color="grey",
             linestyle=":",
             linewidth=1.5,
-            label="Target Residual",
+            label="1e-7",
         )
         plt.xlabel("Cycles")
         plt.ylabel("2-norm")
-        plt.title(rf"Convergence History for $N=128$, lmax = {lmax_val}")
+        plt.title(rf"Convergence History for N=128, lmax={lmax_val}")
 
         max_cycles = df_lmax_conv["CycleIteration"].max()
         min_resid = df_lmax_conv["ResidualNorm"].min()
@@ -114,16 +114,16 @@ ax2a.plot(
     df_2level["Cycles"],
     marker="o",
     linestyle="-",
-    label="2-Level",
+    label="2-level",
 )
 ax2a.plot(
     df_maxlevel["N"],
     df_maxlevel["Cycles"],
     marker="s",
     linestyle="--",
-    label="Max-Level (N=8 Coarsest)",
+    label="max-level",
 )
-ax2a.set_xlabel("Grid Size (N_interior)")
+ax2a.set_xlabel("Size")
 ax2a.set_ylabel("Cycles")
 ax2a.set_title("Cycles vs. Grid Size")
 ax2a.set_xscale("log", base=2)
@@ -137,16 +137,16 @@ ax2b.plot(
     df_2level["Runtime"],
     marker="o",
     linestyle="-",
-    label="2-Level",
+    label="2-level",
 )
 ax2b.plot(
     df_maxlevel["N"],
     df_maxlevel["Runtime"],
     marker="s",
     linestyle="--",
-    label="Max-Level (N=8 Coarsest)",
+    label="max-level",
 )
-ax2b.set_xlabel("Grid Size (N_interior)")
+ax2b.set_xlabel("Size")
 ax2b.set_ylabel("Runtime (s)")
 ax2b.set_title("Runtime vs. Grid Size")
 ax2b.set_xscale("log", base=2)
