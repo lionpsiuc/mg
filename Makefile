@@ -1,26 +1,49 @@
 CC      = gcc
-CFLAGS  = -Wall -Wextra -O3 -std=c2x -march=native -D_GNU_SOURCE
+CFLAGS  = -D_GNU_SOURCE -Iinclude -march=native -O3 -std=c2x -Wall -Wextra
 LDFLAGS = -lm
 
-TARGETS     = mg1 mg2
-CSV_FILES   = summary.csv residuals.csv comparison.csv
-PLOT_SCRIPT = plot.py
-PLOTS       = 1_perf-vs-lmax.png 1_residuals-*.png 2_comparison.png
+SRC_DIR     = src
+OBJ_DIR     = obj
+BIN_DIR     = bin
+COMMON_DIR  = $(SRC_DIR)/common
+Q1_DIR      = $(SRC_DIR)/q1
+Q2_DIR      = $(SRC_DIR)/q2
 
-all: $(TARGETS)
+COMMON_SRCS = multigrid.c
 
-mg1: mg1.c
-	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
+COMMON_OBJS = $(patsubst %.c,$(OBJ_DIR)/common/%.o,$(COMMON_SRCS))
+Q1_OBJ      = $(OBJ_DIR)/q1/main.o
+Q2_OBJ      = $(OBJ_DIR)/q2/main.o
 
-mg2: mg2.c
-	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
+TARGETS = $(BIN_DIR)/q1 $(BIN_DIR)/q2
 
-run: mg1 mg2
-	./mg1
-	./mg2
-	python3 $(PLOT_SCRIPT)
+all: directories $(TARGETS)
+
+directories:
+	@mkdir -p $(OBJ_DIR)/common $(OBJ_DIR)/q1 $(OBJ_DIR)/q2 $(BIN_DIR)
+
+$(OBJ_DIR)/common/%.o: $(COMMON_DIR)/%.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(OBJ_DIR)/q1/main.o: $(Q1_DIR)/main.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(OBJ_DIR)/q2/main.o: $(Q2_DIR)/main.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BIN_DIR)/q1: $(Q1_OBJ) $(COMMON_OBJS)
+	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
+
+$(BIN_DIR)/q2: $(Q2_OBJ) $(COMMON_OBJS)
+	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
+
+run: bin/q1 bin/q2
+	@mkdir -p data figs
+	./bin/q1
+	./bin/q2
+	python3 scripts/plot.py
 
 clean:
-	rm -f $(TARGETS) $(CSV_FILES) $(PLOTS)
+	rm -rf $(OBJ_DIR) $(BIN_DIR)
 
-.PHONY: all run clean
+.PHONY: all clean directories
